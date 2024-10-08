@@ -6,6 +6,8 @@ import json
 import sys
 from datetime import datetime, timezone
 from enum import Enum, auto, unique
+from os import path
+from urllib import error, request
 from typing import List, NamedTuple, Tuple
 
 from dateutil.relativedelta import relativedelta
@@ -150,21 +152,19 @@ class JSONInputData(NamedTuple):
     nondraft_prs: List[BasicPRInformation]
     # Information about all PRs marked as draft
     draft_prs: List[BasicPRInformation]
-    # Detailed information about a number of PRs (need to cover all of them)
-    detailed_pr_info: dict
 
 
 # Validate the command-line arguments and try to read all data passed in via JSON files.
 def read_json_files() -> JSONInputData:
     # Check if the user has provided the correct number of arguments
-    if len(sys.argv) < 4:
-        print("Usage: python3 dashboard.py <pr-info.json> <all-nondraft-prs.json> <all-draft-PRs.json> <json_file1> <json_file2> ...")
+    if len(sys.argv) < 3:
+        print("Usage: python3 dashboard.py <all-nondraft-prs.json> <all-draft-PRs.json> <json_file1> <json_file2> ...")
         sys.exit(1)
     # Dictionary of all PRs to include in a given dashboard.
     # This data is given by the json files provided by the user.
     prs_to_list : dict[Dashboard, List[BasicPRInformation]] = dict()
     # Iterate over the json files provided by the user
-    for i in range(4, len(sys.argv)):
+    for i in range(3, len(sys.argv)):
         filename = sys.argv[i]
         if filename not in EXPECTED_INPUT_FILES:
             print(f"bad argument: file {filename} is not recognised; did you mean one of these?\n{', '.join(EXPECTED_INPUT_FILES.keys())}")
@@ -173,12 +173,10 @@ def read_json_files() -> JSONInputData:
             prs = _extract_prs(json.load(f))
             kind = EXPECTED_INPUT_FILES[filename]
             prs_to_list[kind] = prs_to_list.get(kind, []) + prs
-    with open(sys.argv[2]) as ready_file, open(sys.argv[3]) as draft_file:
+    with open(sys.argv[1]) as ready_file, open(sys.argv[2]) as draft_file:
         all_nondraft_prs = _extract_prs(json.load(ready_file))
         all_draft_prs = _extract_prs(json.load(draft_file))
-    with open(sys.argv[1], 'r') as f:
-        pr_infos = json.load(f)
-    return JSONInputData(prs_to_list, all_nondraft_prs, all_draft_prs, pr_infos)
+    return JSONInputData(prs_to_list, all_nondraft_prs, all_draft_prs)
 
 
 EXPLANATION = '''
@@ -198,7 +196,6 @@ You can filter that list as you like, such as by entering the PR number or your 
 
 
 # Print a webpage "why is my PR not on the queue" to a new file of name 'outfile'.
-# FIXME: can I avoid the hard-coding of the output file?
 def print_on_the_queue_page(outfile : str) -> None:
     def icon(state: bool) -> str:
         return '&#9989;' if state else '&#10060;'
@@ -263,7 +260,12 @@ def main() -> None:
         links.append(f"<a href=\"#{id}\" title=\"{short_description(kind)}\" target=\"_self\">{id}</a>")
     print(f"<br><p>\n<b>Quick links:</b> <a href=\"#statistics\" target=\"_self\">PR statistics</a> | {str.join(' | ', links)}</p>")
 
+    # List of all PR numbers which should have further information presented:
+    # basically, any PR on one of the dashboards, except for the "bad title", "missing labels" etc. ones.
+    prs_with_info : List[int] = []
     prs_to_list : dict[Dashboard, List[BasicPRInformation]] = input_data.prs_on_boards
+    for kind in prs_to_list:
+        prs_with_info.extend([pr.number for pr in prs_to_list[kind]])
     queue_prs = prs_to_list[Dashboard.Queue]
     prs_to_list[Dashboard.QueueNewContributor] = prs_with_label(queue_prs, 'new-contributor')
     prs_to_list[Dashboard.QueueEasy] = prs_with_label(queue_prs, 'easy')
@@ -271,13 +273,24 @@ def main() -> None:
     print(gather_pr_statistics(prs_to_list, input_data.nondraft_prs, input_data.draft_prs))
     all_ready_prs = prs_without_label(input_data.nondraft_prs, 'WIP')
     prs_to_list[Dashboard.TechDebt] = prs_with_label(all_ready_prs, 'tech debt')
+    prs_with_info.extend([pr.number for pr in prs_to_list[Dashboard.TechDebt]])
+
+    # Get advanced information about all PRs to consider.
+    repo_url = "https://github.com/jcommelin/gh-mathlib-metadata"
+    for pr_number in set(prs_with_info):
+        url = f"{repo_url}/blob/master/data/{pr_number}/pr_info.json"
+        try:
+            request.urlretrieve(url, f"{pr_number}.json")
+            # print(f"Downloading information for PR {pr_number} was successful!")
+        except error.URLError:
+            print(f"Found no data for PR {pr_number}", file=sys.stderr)
 
     (bad_title, unlabelled, contradictory) = compute_dashboards_bad_labels_title(input_data.nondraft_prs)
     prs_to_list[Dashboard.BadTitle] = bad_title
     prs_to_list[Dashboard.Unlabelled] = unlabelled
     prs_to_list[Dashboard.ContradictoryLabels] = contradictory
     for kind in Dashboard._member_map_.values():
-        print_dashboard(input_data.detailed_pr_info, prs_to_list.get(kind, []), kind)
+        print_dashboard(prs_to_list.get(kind, []), kind)
 
     print(HTML_FOOTER)
 
@@ -485,10 +498,7 @@ def _extract_prs(data: dict) -> List[BasicPRInformation]:
 
 
 # Print table entries about a sequence of PRs.
-# If 'print_detailed_information' is true, print information about each PR in this list:
-# its diff size, number of files modified and number of comments.
-# (Some queries, e.g. about badly labelled PR, omit this information.)
-def _print_pr_entries(pr_infos: dict, prs : List[BasicPRInformation], print_detailed_information: bool) -> None:
+def _print_pr_entries(prs : List[BasicPRInformation]) -> None:
     for pr in prs:
         print("<tr>")
         print("<td>{}</td>".format(pr_link(pr.number, pr.url)))
@@ -498,25 +508,32 @@ def _print_pr_entries(pr_infos: dict, prs : List[BasicPRInformation], print_deta
         for label in pr.labels:
             print(label_link(label))
         print("</td>")
-        if print_detailed_information:
-            try:
-                pr_info = pr_infos[str(pr.number)]
-                print("<td>{}/{}</td>".format(pr_info["additions"], pr_info["deletions"]))
-                print("<td>{}</td>".format(pr_info["changed_files"]))
-                number_comments = pr_info["comments"] + pr_info["review_comments"]
-                print(f"<td>{number_comments}</td>")
-            except KeyError:
-                print("<td>-1/-1</td>\n<td>-1</td>\n<td>-1</td>")
-                print(f"PR #{pr.number} is wicked!", file=sys.stderr)
-        else:
-            print("<td>-1/-1</td>\n<td>-1</td>\n<td>-1</td>")
+        # Detailed information about the current PR.
+        pr_info = None
+        filename = f"{pr.number}.json"
 
+        if path.exists(filename):
+            with open(f"{pr.number}.json", "r") as file:
+                pr_info = json.load(file)
+        if pr_info is None:
+            print("<td>-1/-1</td>\n<td>-1</td>\n<td>-1</td>")
+        else:
+            inner = pr_info["data"]["repository"]["pullRequest"]
+            print(f'<td>{inner["additions"]}/{inner["deletions"]}</td>')
+            print(f'<td>{inner["changedFiles"]}</td>')
+            # Add the number of normal and review comments.
+            number_comments = len(inner["comments"]["nodes"])
+            number_review_comments = 0
+            review_threads = inner["reviewThreads"]["nodes"]
+            for t in review_threads:
+                number_review_comments += len(t["comments"]["nodes"])
+            print(f"<td>{number_comments + number_review_comments}</td>")
         print("<td>{}</td>".format(time_info(pr.updatedAt)))
         print("</tr>")
 
 
 # Print a dashboard of a given list of PRs.
-def _print_dashboard(pr_infos: dict, prs : List[BasicPRInformation], kind: Dashboard, print_detailed_information: bool) -> None:
+def print_dashboard(prs : List[BasicPRInformation], kind: Dashboard) -> None:
     # Title of each list, and the corresponding HTML anchor.
     # Explain what each dashboard contains upon hovering the heading.
     (id, title) = getIdTitle(kind)
@@ -540,16 +557,10 @@ def _print_dashboard(pr_infos: dict, prs : List[BasicPRInformation], kind: Dashb
     <th>Updated</th>
     </tr>
     </thead>""")
-
-    _print_pr_entries(pr_infos, prs, print_detailed_information)
+    _print_pr_entries(prs)
 
     # Print the footer
     print("</table>")
-
-
-def print_dashboard(pr_info: dict, prs : List[BasicPRInformation], kind : Dashboard) -> None:
-    # We use the PR info file to provide additional information.
-    _print_dashboard(pr_info, prs, kind, True)
 
 
 # Extract all PRs from a given list which have a certain label.
