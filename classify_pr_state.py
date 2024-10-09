@@ -1,4 +1,5 @@
 '''Helper utilities for determining the current state of a pull request from e.g. its labels.'''
+
 from datetime import datetime
 from enum import Enum, auto
 from typing import List, NamedTuple
@@ -26,6 +27,7 @@ class LabelKind(Enum):
 # NB. Make sure this mapping reflects the *current* label names on github.
 # For historical purposes, it might be necessary to also track their
 # historical names: for the current use of this code, this is not an issue.
+# TODO: revisit this for PR state tracking over time!
 label_categorisation_rules: dict[str, LabelKind] = {
     "WIP": LabelKind.WIP,
     "awaiting-review-DONT-USE": LabelKind.Review,
@@ -105,6 +107,62 @@ def label_to_prstatus(label: LabelKind) -> PRStatus:
         LabelKind.Delegated: PRStatus.Delegated,
         LabelKind.Bors: PRStatus.AwaitingBors,
     }[label]
+
+
+# An old fragment, trying to create a perfect "ordering" among all possible labels
+# This was used for 'determine_PR_status' (but is superseded now).
+# (about which label is "most significant" about the PR's state). Sadly, the list below
+# yields a non-transitive "order", which means the *order* in which labels are added
+# makes a difference. Hence, we settled on a simpler (but transitive) scheme instead.
+
+# Basic set-up is as below: no and only one label is easy; exclude contradictory labels first.
+# Algorithm here is: find the "maximal" label if there are several; then return the
+# corresponding state.
+# # Any item is equal it itself.
+# # Store all pairs (kind, kind2) where 'kind' has lower prior
+# # than 'kind2' for determining this PR's status.
+# lower_than: List[Tuple[LabelKind, LabelKind]] = [
+#     # "Blocked" tages priority over most other labels.
+#     (LabelKind.Author, LabelKind.Blocked),
+#     (LabelKind.Review, LabelKind.Blocked),
+#     (LabelKind.Decision, LabelKind.Blocked),
+#     (LabelKind.MergeConflict, LabelKind.Blocked),
+#     (LabelKind.WIP, LabelKind.Blocked),
+#     # A PR should be **not** be marked ready-for-merge and b
+#     # Weird combination, but could make sense.
+#     (LabelKind.Delegated, LabelKind.Blocked),
+#     # A merge conflict takes priority over waiting on author
+#     (LabelKind.Author, LabelKind.MergeConflict),
+#     (LabelKind.Review, LabelKind.MergeConflict),
+#     (LabelKind.Delegated, LabelKind.MergeConflict),
+#     (LabelKind.Bors, LabelKind.MergeConflict),
+#     # "Waiting for decision" takes priority over a merge con
+#     # as does "work in progress".
+#     # NB. This makes our relation non-transitive, as it is r
+#     # by definition, but satisfies WIP < Author > Bors > Mer
+#     # We *can* deal with that, though.
+#     (LabelKind.MergeConflict, LabelKind.Decision),
+#     (LabelKind.MergeConflict, LabelKind.WIP),
+#     # "Waiting for a decision" contradicts the remaining lab
+#     # Sent to bors takes priority over awaiting review, auth
+#     # Bors and WIP are contradictory and excluded above.
+#     # FIXME: In practice, these combinations can occur with
+#     # in which case this labelling should be reversed. Revis
+#     (LabelKind.Author, LabelKind.Bors),
+#     (LabelKind.Review, LabelKind.Bors),
+#     (LabelKind.Bors, LabelKind.Delegated),
+#     # Waiting for review and delegated *can* make sense, if
+#     # as can 'WIP' and delegated.
+#     (LabelKind.Delegated, LabelKind.Review),
+#     (LabelKind.Review, LabelKind.WIP),
+#     (LabelKind.WIP, LabelKind.Author),
+#     (LabelKind.Delegated, LabelKind.Author),
+#     # Awaiting review and author is contradictory, as is WIP
+# ]
+# # Should have 8 choose 2 pairs; 9 of them are excluded above
+# assert len(lower_than) + 9 == 28
+# # TODO: implement the actual algorithm: compute the pairwise minimum
+# # of all labels, going from left to right
 
 
 def determine_PR_status(date: datetime, state: PRState) -> PRStatus:

@@ -10,6 +10,7 @@ from typing import List, NamedTuple, Tuple
 
 from dateutil.relativedelta import relativedelta
 
+from better_updated import format_delta
 from classify_pr_state import (CIStatus, PRState, PRStatus,
                                determine_PR_status, label_categorisation_rules)
 
@@ -456,21 +457,6 @@ def label_link(label:Label) -> str:
     bgcolor = label.color
     fgcolor = "000000" if isLight(int(bgcolor[:2], 16), int(bgcolor[2:4], 16), int(bgcolor[4:], 16)) else "FFFFFF"
     return f"<a href='{label.url}'><span class='label' style='color: #{fgcolor}; background: #{bgcolor}'>{label.name}</span></a>"
-
-
-def format_delta(delta: relativedelta) -> str:
-    if delta.years > 0:
-        return f"{delta.years} years"
-    elif delta.months > 0:
-        return f"{delta.months} months"
-    elif delta.days > 0:
-        return f"{delta.days} days"
-    elif delta.hours > 0:
-        return f"{delta.hours} hours"
-    elif delta.minutes > 0:
-        return f"{delta.minutes} minutes"
-    else:
-        return f"{delta.seconds} seconds"
 
 
 # Function to format the time of the last update
