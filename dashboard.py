@@ -144,17 +144,6 @@ class Label(NamedTuple):
     url: str
 
 
-# Basic information about a PR: does not contain the diff size, which is contained in pr_info.json instead.
-class BasicPRInformation(NamedTuple):
-    number: int  # PR number, non-negative
-    author: dict
-    title: str
-    url: str
-    labels: List[Label]
-    # Github's answer to "last updated at"
-    updatedAt: str
-
-
 # All information about a single PR contained in `aggregate_pr_info.json`.
 # Keep this in sync with the actual file, extending this once new data is added!
 class AggregatePRInfo(NamedTuple):
@@ -177,6 +166,17 @@ class AggregatePRInfo(NamedTuple):
     number_modified_files: int
     # The github handles of all users (if any) assigned to this PR
     assignees: List[str]
+
+
+# Basic information about a PR: contains all easy info from the REST API,
+# but also simple info from the aggregate file.
+# Does not contain data about this PR's events or so.
+class BasicPRInformation(NamedTuple):
+    number: int  # PR number, non-negative
+    author_url: str
+    labels: List[Label]
+    aggregate_info: AggregatePRInfo
+
 
 # Missing aggregate information will be replaced by this default item.
 PLACEHOLDER_AGGREGATE_INFO = AggregatePRInfo(False, False, "master", "open", datetime.now(), "unknown", "unknown title", [], -1, -1, -1, [])
@@ -638,13 +638,13 @@ def time_info(updatedAt: str) -> str:
 
 
 # Extract all PRs mentioned in a data file.
-def _extract_prs(data: dict) -> List[BasicPRInformation]:
+def _extract_prs(data: dict, aggregate_info: AggregatePRInfo) -> List[BasicPRInformation]:
     prs = []
     for page in data["output"]:
         for entry in page["data"]["search"]["nodes"]:
             labels = [Label(label["name"], label["color"], label["url"]) for label in entry["labels"]["nodes"]]
             prs.append(BasicPRInformation(
-                entry["number"], entry["author"], entry["title"], entry["url"], labels, entry["updatedAt"]
+                entry["number"], entry["author"]["url"], labels, aggregate_info
             ))
     return prs
 
@@ -653,34 +653,23 @@ def _extract_prs(data: dict) -> List[BasicPRInformation]:
 def _compute_pr_entries(prs: List[BasicPRInformation]) -> str:
     result = ""
     for pr in prs:
-        entries = [pr_link(pr.number, pr.url), user_link(pr.author), title_link(pr.title, pr.url), _write_labels(pr.labels)]
+        author = { "login": pr.aggregate_info.author, "url": pr.author_url }
+        url = f"https://github.com/leanprover-community/mathlib4/pull/{pr.number}"
+        entries = [pr_link(pr.number, url), user_link(author), title_link(pr.aggregate_info.title, url), _write_labels(pr.labels)]
         # Detailed information about the current PR.
-        pr_info = None
-        filename = f"data/{pr.number}/pr_info.json"
-        if path.exists(filename):
-            with open(filename, "r") as file:
-                pr_info = json.load(file)
-        if pr_info is None:
-            print(f"main dashboard: found no aggregate information for PR {pr.number}", file=sys.stderr)
-            entries.extend(["-1/-1", "-1", "-1"])
-        else:
-            # We treat non-well-formed data as missing.
-            # FUTURE: unify and centralise all these checks for bad/missing data (also for CI status)
-            if "data" not in pr_info or "errors" in pr_info:
-                entries.extend(["-1/-1", "-1", "-1"])
-                continue
-            inner = pr_info["data"]["repository"]["pullRequest"]
-            entries.extend([
-                "{}/{}".format(inner["additions"], inner["deletions"]), inner["changedFiles"]
-            ])
-            # Add the number of normal and review comments.
-            number_comments = len(inner["comments"]["nodes"])
-            number_review_comments = 0
-            review_threads = inner["reviewThreads"]["nodes"]
-            for t in review_threads:
-                number_review_comments += len(t["comments"]["nodes"])
-            entries.append(f"{number_comments + number_review_comments}")
-        entries.append(time_info(pr.updatedAt))
+        # TODO: do the number of total comments as well!
+        number_total_comments = "-1"
+            # inner = pr_info["data"]["repository"]["pullRequest"]
+            # number_comments = len(inner["comments"]["nodes"])
+            # number_review_comments = 0
+            # review_threads = inner["reviewThreads"]["nodes"]
+            # for t in review_threads:
+            #     number_review_comments += len(t["comments"]["nodes"])
+        entries.extend([
+            f"{pr.aggregate_info.additions}/{pr.aggregate_info.deletions}",
+            f"{pr.aggregate_info.number_modified_files}",
+            number_total_comments, time_info(pr.aggregate_info.last_updated)
+        ])
         result += _write_table_row(entries, "    ")
     return result
 
