@@ -24,6 +24,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         ./gather_stats.sh 8 2>&1 | tee gather_stats.log  # Log output to gather_stats.log
+        ./download_missing_outdated_PRs.sh
 
     - name: "Update aggregate data file"
       id: "aggregate-file"
