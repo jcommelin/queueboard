@@ -11,6 +11,4 @@ set -e -u -o pipefail
 OWNER=leanprover-community
 REPO=mathlib4
 
-PR_NUMBER=$1
-
 gh api graphql -f owner=$OWNER -f repo=$REPO -F query=@open_prs_with_metadata.graphql
