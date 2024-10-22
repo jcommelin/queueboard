@@ -1,193 +1,197 @@
 query($owner: String!, $repo: String!) {
   repository(owner: $owner, name: $repo) {
-    pullRequest(first: 100, after: $cursor, orderBy: { direction:ASC, field: number }) {
-      author {
-        login
-      }
-      commits(first: 100) {
-        nodes {
-          commit {
+    pullRequests(states:OPEN, first: 100, after: $cursor, orderBy: { direction:ASC, field: number }) {
+      edges {
+        node {
+          author {
+            login
+          }
+          commits(first: 100) {
+            nodes {
+              commit {
+                oid
+              }
+            }
+          }
+          createdAt
+          headRefName
+          headRefOid
+          headRepository {
+            name
+            owner {
+              login
+            }
+          }
+          headRepositoryOwner {
+            login
+          }
+          id
+          mergeCommit {
             oid
           }
-        }
-      }
-      createdAt
-      headRefName
-      headRefOid
-      headRepository {
-        name
-        owner {
-          login
-        }
-      }
-      headRepositoryOwner {
-        login
-      }
-      id
-      mergeCommit {
-        oid
-      }
-      number
-      potentialMergeCommit {
-        oid
-      }
-      closingIssuesReferences(first: 100) {
-        nodes {
-          id
+          number
+          potentialMergeCommit {
+            oid
+          }
+          closingIssuesReferences(first: 100) {
+            nodes {
+              id
+              title
+              url
+            }
+          }
+          state
+          statusCheckRollup {
+            contexts(first: 100) {
+              nodes {
+                __typename
+                ... on StatusContext {
+                  id
+                  context
+                  state
+                  targetUrl
+                  description
+                }
+                ... on CheckRun {
+                  id
+                  name
+                  conclusion
+                  status
+                  detailsUrl
+                }
+              }
+            }
+          }
           title
+          updatedAt
           url
-        }
-      }
-      state
-      statusCheckRollup {
-        contexts(first: 100) {
-          nodes {
-            __typename
-            ... on StatusContext {
-              id
-              context
-              state
-              targetUrl
-              description
-            }
-            ... on CheckRun {
-              id
-              name
-              conclusion
-              status
-              detailsUrl
-            }
-          }
-        }
-      }
-      title
-      updatedAt
-      url
-      timelineItems(first: 100) {
-        nodes {
-          __typename
-          ... on LabeledEvent {
-            id
-            createdAt
-            label {
-              id
-              name
-            }
-          }
-          ... on UnlabeledEvent {
-            id
-            createdAt
-            label {
-              id
-              name
-            }
-          }
-          ... on AssignedEvent {
-            id
-            createdAt
-            assignee {
-              ... on User {
+          timelineItems(first: 100) {
+            nodes {
+              __typename
+              ... on LabeledEvent {
                 id
-                login
+                createdAt
+                label {
+                  id
+                  name
+                }
               }
-            }
-          }
-          ... on ClosedEvent {
-            id
-            createdAt
-          }
-          ... on ReopenedEvent {
-            id
-            createdAt
-          }
-          ... on ReviewRequestedEvent {
-            id
-            createdAt
-            requestedReviewer {
-              ... on User {
+              ... on UnlabeledEvent {
                 id
-                login
+                createdAt
+                label {
+                  id
+                  name
+                }
               }
-            }
-          }
-          ... on ReviewRequestRemovedEvent {
-            id
-            createdAt
-            requestedReviewer {
-              ... on User {
+              ... on AssignedEvent {
                 id
-                login
+                createdAt
+                assignee {
+                  ... on User {
+                    id
+                    login
+                  }
+                }
               }
-            }
-          }
-          ... on ReviewDismissedEvent {
-            id
-            createdAt
-            review {
-              author {
-                login
-              }
-            }
-          }
-          ... on MergedEvent {
-            id
-            createdAt
-            mergeRefName
-          }
-          ... on HeadRefDeletedEvent {
-            id
-            createdAt
-          }
-          ... on HeadRefRestoredEvent {
-            id
-            createdAt
-          }
-          ... on HeadRefForcePushedEvent {
-            id
-            createdAt
-          }
-          ... on BaseRefForcePushedEvent {
-            id
-            createdAt
-          }
-          ... on ReadyForReviewEvent {
-            id
-            createdAt
-          }
-          ... on ConvertToDraftEvent {
-            id
-            createdAt
-          }
-          ... on IssueComment {
-            id
-            createdAt
-            body
-            author {
-              login
-            }
-          }
-          ... on CrossReferencedEvent {
-            id
-            createdAt
-            source {
-              ... on PullRequest {
+              ... on ClosedEvent {
                 id
-                title
-                url
+                createdAt
               }
-              ... on Issue {
+              ... on ReopenedEvent {
                 id
-                title
-                url
+                createdAt
               }
-            }
-          }
-          ... on PullRequestReview {
-            id
-            createdAt
-            body
-            author {
-              login
+              ... on ReviewRequestedEvent {
+                id
+                createdAt
+                requestedReviewer {
+                  ... on User {
+                    id
+                    login
+                  }
+                }
+              }
+              ... on ReviewRequestRemovedEvent {
+                id
+                createdAt
+                requestedReviewer {
+                  ... on User {
+                    id
+                    login
+                  }
+                }
+              }
+              ... on ReviewDismissedEvent {
+                id
+                createdAt
+                review {
+                  author {
+                    login
+                  }
+                }
+              }
+              ... on MergedEvent {
+                id
+                createdAt
+                mergeRefName
+              }
+              ... on HeadRefDeletedEvent {
+                id
+                createdAt
+              }
+              ... on HeadRefRestoredEvent {
+                id
+                createdAt
+              }
+              ... on HeadRefForcePushedEvent {
+                id
+                createdAt
+              }
+              ... on BaseRefForcePushedEvent {
+                id
+                createdAt
+              }
+              ... on ReadyForReviewEvent {
+                id
+                createdAt
+              }
+              ... on ConvertToDraftEvent {
+                id
+                createdAt
+              }
+              ... on IssueComment {
+                id
+                createdAt
+                body
+                author {
+                  login
+                }
+              }
+              ... on CrossReferencedEvent {
+                id
+                createdAt
+                source {
+                  ... on PullRequest {
+                    id
+                    title
+                    url
+                  }
+                  ... on Issue {
+                    id
+                    title
+                    url
+                  }
+                }
+              }
+              ... on PullRequestReview {
+                id
+                createdAt
+                body
+                author {
+                  login
+                }
+              }
             }
           }
         }
