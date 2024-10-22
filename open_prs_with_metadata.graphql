@@ -1,6 +1,6 @@
-query($owner: String!, $repo: String!) {
+query($owner: String!, $repo: String!, $endCursor: String) {
   repository(owner: $owner, name: $repo) {
-    pullRequests(states:OPEN, first: 100, after: $cursor, orderBy: { direction:ASC, field: number }) {
+    pullRequests(states:OPEN, first: 25, after: $endCursor) {
       edges {
         node {
           author {
@@ -195,6 +195,12 @@ query($owner: String!, $repo: String!) {
             }
           }
         }
+      }
+      pageInfo {
+        endCursor
+        startCursor
+        hasNextPage
+        hasPreviousPage
       }
     }
   }
