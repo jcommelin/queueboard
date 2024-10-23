@@ -206,7 +206,7 @@ def read_json_files() -> JSONInputData:
         with open(sys.argv[i]) as prfile:
             open_prs = _extract_prs(json.load(prfile))
             all_open_prs.extend(open_prs)
-    with open(path.join("processed_data", "aggregate_pr_data.json"), "r") as f:
+    with open(path.join("..", "processed_data", "aggregate_pr_data.json"), "r") as f:
         data = json.load(f)
         label_colours = data["label_colours"]
         def toLabel(name: str) -> Label:
