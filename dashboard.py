@@ -465,6 +465,8 @@ def main() -> None:
     write_review_queue_page(updated, prs_to_list)
     # XXX: should the list of tech debt PRs be included here?
     write_maintainers_quick_page(updated, prs_to_list)
+    # XXX: open to refining what is shown on that page!
+    write_help_out_page(updated, prs_to_list)
 
     write_main_page(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs, updated)
 
@@ -520,6 +522,24 @@ def write_maintainers_quick_page(updated: str, prs_to_list: dict[Dashboard, List
     dashboards = [write_dashboard(prs_to_list[kind], kind) for (kind, _, _) in items]
     body += '\n'.join(dashboards) + '\n'
     write_webpage(body, "../maintainers_quick.html")
+
+
+def write_help_out_page(updated: str, prs_to_list: dict[Dashboard, List[BasicPRInformation]]) -> None:
+    title = "  <h1>Helping out: short tasks</h1>"
+    welcome = "<p>Would you like to help out at a PR, differently from reviewing. Here are some ideas:</p>"
+    items = [
+        (Dashboard.NeedsHelp, "take a look at ", "PRs labelled help-wanted or please-adopt", ""),
+        (Dashboard.NeedsMerge, "If the author hasn't noticed, you can ask in a PR which ", 'just has a merge conflict, but would be reviewable otherwise', ". (Remember, that most contributors to mathlib are volunteers/contribute in their free time, often have other commitments &emdash; and that real-life events can happen!)"),
+        # Future: add "just CI failing" here
+        (Dashboard.FromFork, "post a comment on a ", "PR made from a fork", ", nicely asking them to re-submit it from a mathlib branch instead"),
+        # XXX: add all new contributor PRs here?
+        # XXX: add all stale delegated PRs here?
+    ]
+    list_items = [f'<li>{pre}<a href="#{getIdTitle(kind)[0]}">{description}</a>{post}</li>\n' for (kind, pre, description, post) in items]
+    body = f"{title}\n  {welcome}\n  <ul>{'    '.join(list_items)}  </ul>\n  <small>This dashboard was last updated on: {updated}</small>\n\n"
+    dashboards = [write_dashboard(prs_to_list[kind], kind) for (kind, _, _, _) in items]
+    body += '\n'.join(dashboards) + '\n'
+    write_webpage(body, "../help_out.html")
 
 
 # Write the main page for the dashboard to the file index.html.
