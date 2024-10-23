@@ -560,6 +560,8 @@ def write_triage_page(updated: str, prs_to_list: dict[Dashboard, List[BasicPRInf
             continue
         items.append((kind, "", long_description(kind), ""))
     list_items = [f'<li>{pre}<a href="#{getIdTitle(kind)[0]}">{description}</a>{post}</li>\n' for (kind, pre, description, post) in items]
+    # Also: add a giant table with all PRs, and their status or so!
+
     body = f"{title}\n  {welcome}\n  <ul>{'    '.join(list_items)}  </ul>\n  <small>This dashboard was last updated on: {updated}</small>\n\n"
     dashboards = [write_dashboard(prs_to_list[kind], kind) for (kind, _, _, _) in items]
     body += '\n'.join(dashboards) + '\n'
