@@ -463,6 +463,8 @@ def main() -> None:
     # Future idea: add a histrogram with the most common areas,
     # or dedicated tables for common areas (and perhaps one for t-algebra, because it's hard to filter)
     write_review_queue_page(updated, prs_to_list)
+    # XXX: should the list of tech debt PRs be included here?
+    write_maintainers_quick_page(updated, prs_to_list)
 
     write_main_page(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs, updated)
 
@@ -500,6 +502,24 @@ def write_review_queue_page(updated: str, prs_to_list: dict[Dashboard, List[Basi
     dashboards = [write_dashboard(prs_to_list[kind], kind) for (kind, _, _) in items]
     body += '\n'.join(dashboards) + '\n'
     write_webpage(body, "../review_dashboard.html")
+
+
+def write_maintainers_quick_page(updated: str, prs_to_list: dict[Dashboard, List[BasicPRInformation]]) -> None:
+    title = "  <h1>Maintainers page: short tasks</h1>"
+    welcome = "<p>Are you a maintainer with just a short amount of time? The following kinds of pull requests could be relevant for you.</p>"
+    items = [
+        (Dashboard.StaleReadyToMerge, "stale PRs ready-to-merge", ""),
+        (Dashboard.StaleMaintainerMerge, 'stale PRs labelled "maintainer merge"', ""),
+        (Dashboard.FromFork, 'all PRs made from a fork', ""),
+        (Dashboard.NeedsDecision, 'all PRs waiting on finding consensus on zulip', ""),
+        (Dashboard.QueueTechDebt, "just the PRs addressing technical debt", ""),
+    ]
+    list_items = [f'<li><a href="#{getIdTitle(kind)[0]}">{description}</a>{unlinked}</li>\n' for (kind, description, unlinked) in items]
+    post = 'If you realise you actually have a bit more time, you can also look at the <a href="review_dashboard.html">page for reviewers</a>, or look at the <a href="triage.html">triage page!</a>'
+    body = f"{title}\n  {welcome}\n  <ul>{'    '.join(list_items)}  </ul>\n  {post}<br>\n  <small>This dashboard was last updated on: {updated}</small>\n\n"
+    dashboards = [write_dashboard(prs_to_list[kind], kind) for (kind, _, _) in items]
+    body += '\n'.join(dashboards) + '\n'
+    write_webpage(body, "../maintainers_quick.html")
 
 
 # Write the main page for the dashboard to the file index.html.
