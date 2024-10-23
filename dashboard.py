@@ -518,6 +518,7 @@ def write_maintainers_quick_page(updated: str, prs_to_list: dict[Dashboard, List
     items = [
         (Dashboard.StaleReadyToMerge, "stale PRs ready-to-merge", ""),
         (Dashboard.StaleMaintainerMerge, 'stale PRs labelled "maintainer merge"', ""),
+        (Dashboard.AllMaintainerMerge, "all PRs labelled 'maintainer merge'", ""),
         (Dashboard.FromFork, 'all PRs made from a fork', ""),
         (Dashboard.NeedsDecision, 'all PRs waiting on finding consensus on zulip', ""),
         (Dashboard.QueueTechDebt, "just the PRs addressing technical debt", ""),
