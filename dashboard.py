@@ -460,6 +460,10 @@ def main() -> None:
     # FUTURE: can this time be displayed in the local time zone of  the user viewing this page?
     updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
     write_overview_page(updated)
+    # Future idea: add a histrogram with the most common areas,
+    # or dedicated tables for common areas (and perhaps one for t-algebra, because it's hard to filter)
+    write_review_queue_page(updated, prs_to_list)
+
     write_main_page(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs, updated)
 
 
@@ -480,6 +484,22 @@ def write_overview_page(updated: str) -> None:
     feedback = 'Feedback (including bug reports and ideas for improvements) on this dashboard is very welcome, for instance <a href="https://github.com/jcommelin/queueboard">directly on the github repository</a>.<br>'
     body = f"{title}\n  {welcome}\n  {feedback}\n  <small>This dashboard was last updated on: {updated}</small>\n"
     write_webpage(body, "../overview.html")
+
+
+def write_review_queue_page(updated: str, prs_to_list: dict[Dashboard, List[BasicPRInformation]]) -> None:
+    title = "  <h1>The mathlib review queue</h1>"
+    welcome = "<p>Welcome to the mathlib review page. Everybody's help with reviewing is appreciated. Reviewing contributions is important, and everybody is welcome to review pull requests! If you're not sure how, the <a href=\"https://leanprover-community.github.io/contribute/pr-review.html\">pull request review guide</a> is there to help you.<br>\n  This page contains tables of</p>"
+    items = [
+        (Dashboard.Queue, "all PRs ready for review", ""),
+        (Dashboard.QueueNewContributor, 'among these, all PRs written by "new contributors"', " (i.e., everybody who has had at most five PRs merged to mathlib)"),
+        (Dashboard.QueueEasy, 'just the PRs labelled "easy"', ""),
+        (Dashboard.QueueTechDebt, "just the PRs addressing technical debt", ""),
+    ]
+    list_items = [f'<li><a href="#{getIdTitle(kind)[0]}">{description}</a>{unlinked}</li>\n' for (kind, description, unlinked) in items]
+    body = f"{title}\n  {welcome}\n  <ul>{'    '.join(list_items)}  </ul>\n  <small>This dashboard was last updated on: {updated}</small>\n\n"
+    dashboards = [write_dashboard(prs_to_list[kind], kind) for (kind, _, _) in items]
+    body += '\n'.join(dashboards) + '\n'
+    write_webpage(body, "../review_dashboard.html")
 
 
 # Write the main page for the dashboard to the file index.html.
