@@ -26,10 +26,12 @@ class Dashboard(Enum):
     Queue = 0
     QueueNewContributor = auto()
     QueueEasy = auto()
+    # All PRs labelled "tech-debt" or "longest-pole"
+    QueueTechDebt = auto()
     StaleReadyToMerge = auto()
     StaleDelegated = auto()
     StaleMaintainerMerge = auto()
-    # All ready PRs (not draft, not labelled WIP) labelled with "tech debt".
+    # All ready PRs (not draft, not labelled WIP) labelled with "tech debt" or "longest-pole".
     TechDebt = auto()
     # This PR is blocked on a zulip discussion or similar.
     NeedsDecision = auto()
@@ -56,10 +58,11 @@ def short_description(kind: Dashboard) -> str:
         Dashboard.Queue: "PRs on the review queue",
         Dashboard.QueueNewContributor: "PRs by new mathlib contributors on the review queue",
         Dashboard.QueueEasy: "PRs on the review queue which are labelled 'easy'",
+        Dashboard.QueueTechDebt: "PRs on the review queue which are labelled 'tech debt' or 'longest-pole",
         Dashboard.StaleMaintainerMerge: "stale PRs labelled maintainer merge",
         Dashboard.StaleDelegated: "stale delegated PRs",
         Dashboard.StaleReadyToMerge: "stale PRs labelled auto-merge-after-CI or ready-to-merge",
-        Dashboard.TechDebt: "ready PRs labelled with 'tech debt'",
+        Dashboard.TechDebt: "ready PRs labelled with 'tech debt' or 'longest-pole'",
         Dashboard.NeedsDecision: "PRs blocked on a zulip discussion or similar",
         Dashboard.NeedsMerge: "PRs which just have a merge conflict",
         Dashboard.StaleNewContributor: "stale PRs by new contributors",
@@ -80,6 +83,7 @@ def long_description(kind: Dashboard) -> str:
         Dashboard.Queue: "all PRs which are ready for review: CI passes, no merge conflict and not blocked on other PRs",
         Dashboard.QueueNewContributor: "all PRs by new contributors which are ready for review",
         Dashboard.QueueEasy: "all PRs labelled 'easy' which are ready for review",
+        Dashboard.QueueTechDebt: "all PRs labelled with 'tech debt' or 'longest-pole' which are ready for review",
         Dashboard.NeedsMerge: "all PRs which have a merge conflict, but otherwise fit the review queue",
         Dashboard.StaleDelegated: f"all PRs labelled 'delegated' {notupdated} 24 hours",
         Dashboard.StaleReadyToMerge: f"all PRs labelled 'auto-merge-after-CI' or 'ready-to-merge' {notupdated} 24 hours",
@@ -106,6 +110,7 @@ def getIdTitle(kind: Dashboard) -> Tuple[str, str]:
             "New contributors' PRs on the queue",
         ),
         Dashboard.QueueEasy: ("queue-easy", "PRs on the review queue labelled 'easy'"),
+        Dashboard.QueueTechDebt: ("queue-tech-debt", "PRs on the review queue labelled 'tech debt' or 'longest-pole'"),
         Dashboard.StaleDelegated: ("stale-delegated", "Stale delegated PRs"),
         Dashboard.StaleNewContributor: (
             "stale-new-contributor",
@@ -436,6 +441,7 @@ def main() -> None:
     prs_to_list[Dashboard.Queue] = queue_prs2
     prs_to_list[Dashboard.QueueNewContributor] = prs_with_label(queue_prs, 'new-contributor')
     prs_to_list[Dashboard.QueueEasy] = prs_with_label(queue_prs, 'easy')
+    prs_to_list[Dashboard.QueueTechDebt] = prs_with_any_label(queue_prs, ['tech debt', 'longest-pole'])
 
     a_day_ago = datetime.now() - timedelta(days=1)
     a_week_ago = datetime.now() - timedelta(days=7)
@@ -489,12 +495,14 @@ def write_main_page(
     # Print a quick table of contents.
     links = []
     for kind in Dashboard._member_map_.values():
+        if kind == Dashboard.QueueTechDebt: continue
         (id, _title) = getIdTitle(kind)
         links.append(f"<a href=\"#{id}\" title=\"{short_description(kind)}\" target=\"_self\">{id}</a>")
     body += f"<br><p>\n<b>Quick links:</b> <a href=\"#statistics\" target=\"_self\">PR statistics</a> | {str.join(' | ', links)}</p>\n"
 
     body += gather_pr_statistics(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs)
     for kind in Dashboard._member_map_.values():
+        if kind == Dashboard.QueueTechDebt: continue
         if kind not in prs_to_list:
             print(f"error: forgot to include data for dashboard kind {kind}", file=sys.stderr)
         else:
