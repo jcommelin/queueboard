@@ -31,6 +31,8 @@ class Dashboard(Enum):
     StaleReadyToMerge = auto()
     StaleDelegated = auto()
     StaleMaintainerMerge = auto()
+    # All PRs labelled maintainer-merge, not the stale ones.
+    AllMaintainerMerge = auto()
     # All ready PRs (not draft, not labelled WIP) labelled with "tech debt" or "longest-pole".
     TechDebt = auto()
     # This PR is blocked on a zulip discussion or similar.
@@ -60,6 +62,7 @@ def short_description(kind: Dashboard) -> str:
         Dashboard.QueueEasy: "PRs on the review queue which are labelled 'easy'",
         Dashboard.QueueTechDebt: "PRs on the review queue which are labelled 'tech debt' or 'longest-pole",
         Dashboard.StaleMaintainerMerge: "stale PRs labelled maintainer merge",
+        Dashboard.AllMaintainerMerge: "PRs labelled maintainer merge",
         Dashboard.StaleDelegated: "stale delegated PRs",
         Dashboard.StaleReadyToMerge: "stale PRs labelled auto-merge-after-CI or ready-to-merge",
         Dashboard.TechDebt: "ready PRs labelled with 'tech debt' or 'longest-pole'",
@@ -90,6 +93,7 @@ def long_description(kind: Dashboard) -> str:
         Dashboard.TechDebt: "all 'ready' PRs (not draft, not labelled WIP) labelled with 'tech debt' or 'longest-pole'",
         Dashboard.NeedsDecision: "all PRs labelled 'awaiting-zulip': these are blocked on a zulip discussion or similar",
         Dashboard.StaleMaintainerMerge: f"all PRs labelled 'maintainer-merge' but not 'ready-to-merge' {notupdated} 24 hours",
+        Dashboard.AllMaintainerMerge: "all PRs labelled maintainer merge but not 'ready-to-merge'",
         Dashboard.NeedsHelp: "all PRs which are labelled 'please-adopt' or 'help-wanted'",
         Dashboard.OtherBase: "all non-draft PRs, not labelled WIP, into some branch other than mathlib's master branch",
         Dashboard.FromFork: "all non-draft PRs, not labelled WIP, opened from a fork of mathlib",
@@ -120,6 +124,7 @@ def getIdTitle(kind: Dashboard) -> Tuple[str, str]:
             "stale-maintainer-merge",
             "Stale maintainer-merge'd PRs",
         ),
+        Dashboard.AllMaintainerMerge: ("all-maintainer-merge", "Maintainer merge'd PRs"),
         Dashboard.StaleReadyToMerge: (
             "stale-ready-to-merge",
             "Stale ready-to-merge'd PRs",
@@ -451,6 +456,7 @@ def main() -> None:
     prs_to_list[Dashboard.StaleDelegated] = prs_with_label(one_day_stale, 'delegated')
     mm_prs = prs_with_label(one_day_stale, 'maintainer-merge')
     prs_to_list[Dashboard.StaleMaintainerMerge] = prs_without_label(mm_prs, 'ready-to-merge')
+    prs_to_list[Dashboard.AllMaintainerMerge] = prs_without_label(prs_with_label(nondraft_PRs, 'maintainer-merge'), 'ready-to-merge')
     prs_to_list[Dashboard.StaleNewContributor] = prs_with_label(one_week_stale, 'new-contributor')
 
     (bad_title, unlabelled, contradictory) = compute_dashboards_bad_labels_title(nondraft_PRs)
@@ -555,14 +561,16 @@ def write_main_page(
     # Print a quick table of contents.
     links = []
     for kind in Dashboard._member_map_.values():
-        if kind == Dashboard.QueueTechDebt: continue
+        if kind in [Dashboard.QueueTechDebt, Dashboard.AllMaintainerMerge]:
+            continue
         (id, _title) = getIdTitle(kind)
         links.append(f"<a href=\"#{id}\" title=\"{short_description(kind)}\" target=\"_self\">{id}</a>")
     body += f"<br><p>\n<b>Quick links:</b> <a href=\"#statistics\" target=\"_self\">PR statistics</a> | {str.join(' | ', links)}</p>\n"
 
     body += gather_pr_statistics(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs)
     for kind in Dashboard._member_map_.values():
-        if kind == Dashboard.QueueTechDebt: continue
+        if kind in [Dashboard.QueueTechDebt, Dashboard.AllMaintainerMerge]:
+            continue
         if kind not in prs_to_list:
             print(f"error: forgot to include data for dashboard kind {kind}", file=sys.stderr)
         else:
