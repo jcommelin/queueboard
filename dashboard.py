@@ -453,7 +453,27 @@ def main() -> None:
     prs_to_list[Dashboard.ContradictoryLabels] = contradictory
     # FUTURE: can this time be displayed in the local time zone of  the user viewing this page?
     updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
+    write_overview_page(updated)
     write_main_page(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs, updated)
+
+
+def write_overview_page(updated: str) -> None:
+    title = "  <h1>Mathlib review and triage dashboard</h1>"
+    welcome = '''<p>Welcome to the mathlib review and triage webpage! There are many ways to help, what are you looking for in particular?</p>
+<ul>
+  <li>Would you like to review some PR? Check out <a href="review_dashboard.html">the review dashboard</a>! There are special sections for PRs by new contributors, labelled <em>easy</em> or addressing technical debt.</li>
+  <li>would you like to find out why your PR is (not) on the review queue? Are you interested in an overview of all your PRs with their status? <a href="on_the_queue.html">This webpage</a> contains all information necessary.</li>
+  <li>Are you a maintainer, looking for something <em>quick</em> to do? <a href="maintainers_quick.html">There is a webpage</a> just for you!<br>
+  If you actually have some more time at your hands, feel free to check out the <a href="review_dashboard.html">page for reviewers</a>, or look at the <a href="triage.html">triage page!</a></li>
+  <!-- XXX. I'm not fully sure yet if this page has a coherent theme. Perhaps not! -->
+  <li>Would you just like to help out? <a href="help_out.html">This page</a> collects PRs where help was requested, or where some quick action can be useful.</li>
+  <li>Are you coming here for issue triage: looking for PRs stuck in some state, and would like to move them along? <a href="triage.html">The triage page</a> has the ultimate collection of all public information.</li>
+<!-- hidden page for maintainers to assign reviewers is not public -->
+</ul>'''
+    welcome = "\n  ".join(welcome.splitlines())
+    feedback = 'Feedback (including bug reports and ideas for improvements) on this dashboard is very welcome, for instance <a href="https://github.com/jcommelin/queueboard">directly on the github repository</a>.<br>'
+    body = f"{title}\n  {welcome}\n  {feedback}\n  <small>This dashboard was last updated on: {updated}</small>\n"
+    write_webpage(body, "../overview.html")
 
 
 # Write the main page for the dashboard to the file index.html.
