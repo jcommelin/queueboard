@@ -451,19 +451,19 @@ def main() -> None:
     prs_to_list[Dashboard.BadTitle] = bad_title
     prs_to_list[Dashboard.Unlabelled] = unlabelled
     prs_to_list[Dashboard.ContradictoryLabels] = contradictory
-    write_main_page(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs)
+    # FUTURE: can this time be displayed in the local time zone of  the user viewing this page?
+    updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
+    write_main_page(aggregate_info, prs_to_list, nondraft_PRs, draft_PRs, updated)
 
 
 # Write the main page for the dashboard to the file index.html.
 def write_main_page(
     aggregate_info: dict[int, AggregatePRInfo], prs_to_list: dict[Dashboard, List[BasicPRInformation]],
-    nondraft_PRs: list[BasicPRInformation], draft_PRs: list[BasicPRInformation]
+    nondraft_PRs: list[BasicPRInformation], draft_PRs: list[BasicPRInformation], updated: str
 ) -> None:
     title = "  <h1>Mathlib review and triage dashboard</h1>"
     welcome = '<p>Welcome to the mathlib review and triage dashboard. This is a prototype for better exposing the currently open PRs to mathlib. Feedback (including bug reports and ideas for improvements) on this dashboard is very welcome, for instance <a href="https://github.com/jcommelin/queueboard">directly on the github repository</a>.<br>'
     "You can hover over any section header (and some table headings) to find out what they show. The same works for the table of contents below.</p>"
-    # FUTURE: can this time be displayed in the local time zone of  the user viewing this page?
-    updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")
     body = f"{title}\n  {welcome}  <small>This dashboard was last updated on: {updated}</small>\n"
 
     # Print a quick table of contents.
