@@ -43,10 +43,10 @@ The survey is anonymous and should take less than 5 minutes to complete.
 
 6. Which features of the Queueboard do you use/like most at the moment?
 
-6. What features would you like to see in the Queueboard?
+7. What features would you like to see in the Queueboard?
 
-7. What features would you like to see removed from the Queueboard?
+8. What features would you like to see removed from the Queueboard?
 
-8. What features would you like to see improved in the Queueboard?
+9. What features would you like to see improved in the Queueboard?
 
 
