@@ -64,6 +64,6 @@ The survey is anonymous and should take less than 5 minutes to complete.
 - Decoupling the Queueboard from Mathlib
 - Display times in local time zones
 - Remove minutes/timezones from time columns
-- Stale 'delagated' dashboard
-- The labels 'delegated' and 'maintainer-merge' and 'ready-to-merge' should be pairwise mutually exclusive
+- Allow sharing links to dashboards with pre-set settings (e.g., for triage meetings)
+- The labels 'delegated' and 'maintainer-merge' should be mutually exclusive
 - Other: ...
