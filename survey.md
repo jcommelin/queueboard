@@ -41,12 +41,29 @@ The survey is anonymous and should take less than 5 minutes to complete.
     - [ ] Not useful
     - [ ] Very not useful
 
-6. Which features of the Queueboard do you use/like most at the moment?
+6. Are there things for which the Github interface is still more convenient than the Queueboard?
 
-7. What features would you like to see in the Queueboard?
+7. Are there things for which you still rely on Github rather than the Queueboard?
 
-8. What features would you like to see removed from the Queueboard?
+8. Which features of the Queueboard do you use/like most at the moment?
 
-9. What features would you like to see improved in the Queueboard?
+9. What features would you like to see in the Queueboard?
 
+10. What features would you like to see removed from the Queueboard?
 
+11. What features would you like to see improved in the Queueboard?
+
+---
+
+- Automatic suggestions of potential reviewers
+- Better auto-labeling
+- Views based on subject areas
+- Tracking how much reviewing people have done
+- Automatically creating upstreaming dashboards for projects with a ForMathlib/
+- Zulip bots that ping about PR status for particular projects
+- Decoupling the Queueboard from Mathlib
+- Display times in local time zones
+- Remove minutes/timezones from time columns
+- Stale 'delagated' dashboard
+- The labels 'delegated' and 'maintainer-merge' and 'ready-to-merge' should be pairwise mutually exclusive
+- Other: ...
