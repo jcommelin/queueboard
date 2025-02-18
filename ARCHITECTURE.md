@@ -106,7 +106,7 @@ There are several levels at which this project can be tested. Currently, there a
 
 TODO: there are more generated HTML files now; recommend copying the folder instead...
 - changes to just `dashboard.py` can be tested using the JSON files in the `test` directory: run the following from the `test` directory.
-`python3 ../dashboard.py all-open-PRs-1.json all-open-PRs-2.json`.
+`python3 ../dashboard.py`.
 This creates two webpages named `on_the_queue.html` and `index.html`, overwriting any previous files named thus.
 You can run this command before and after your changes and compare the resulting files (using `diff` or a similar tool). Because of the overwriting, take care to copy e.g. the old version of the output to a different file before running the tool again.
 (The output file needs to be in the top-level directory in order for the styling to work.)

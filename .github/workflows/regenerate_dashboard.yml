@@ -1,8 +1,8 @@
 name: Regenerate dashboard webpages
 
 on:
-  # schedule:
-  #  - cron: '*/10 * * * *'  # Runs every 10 minutes, for now. Github allows at most "every 5 minutes"
+  schedule:
+   - cron: '*/5 * * * *'  # Runs every 5 minutes, the fastest Github allows
   workflow_dispatch:       # Allows manual execution
 
 jobs:
@@ -15,24 +15,19 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        sparse-checkout: 'processed_data/open_pr_data.json'
+        sparse-checkout-cone-mode: false
 
     - name: Set up environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y jq curl gh python3 python3-pip
+        sudo apt-get install -y python3 python3-pip
         pip3 install python-dateutil
-
-    - name: "Download .json files for all open PRs"
-      id: "download-json"
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        bash ./dashboard.sh
 
     - name: "Regenerate the dashboard webpages"
       run: |
-        python3 ./dashboard.py "all-open-PRs-1.json" "all-open-PRs-2.json" > ./index-old.html
-        rm *.json
+        python3 ./dashboard.py
 
     - name: Commit and push changes
       run: |
