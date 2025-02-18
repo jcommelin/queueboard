@@ -78,7 +78,7 @@ jobs:
     - name: "Regenerate the dashboard webpages"
       if: ${{ !cancelled() }} && (steps.download-json.outcome == 'success')
       run: |
-        python3 ./dashboard.py "all-open-PRs-1.json" "all-open-PRs-2.json" > ./index-old.html
+        python3 ./dashboard.py
         rm *.json
 
     - name: Commit and push changes

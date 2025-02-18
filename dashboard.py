@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-# This script accepts json files as command line arguments and displays the data in an HTML dashboard.
-# It assumes that for each PR N which should appear in some dashboard,
-# there is a file N.json in the `data` directory, which contains all necessary detailed information about that PR.
+# This script uses the aggregate information in processed_data/all_open_prs.json
+# to generate several HTML webpages on an HTML dashboard.
 
 import json
 import sys
@@ -16,7 +15,7 @@ from dateutil import parser, relativedelta
 from ci_status import CIStatus
 from classify_pr_state import PRState, PRStatus
 from compute_dashboard_prs import (AggregatePRInfo, BasicPRInformation, Label, DataStatus, LastStatusChange, TotalQueueTime,
-    PLACEHOLDER_AGGREGATE_INFO, compute_pr_statusses, determine_pr_dashboards, infer_pr_url, link_to, parse_aggregate_file, gather_pr_statistics, _extract_prs)
+    compute_pr_statusses, determine_pr_dashboards, infer_pr_url, link_to, parse_aggregate_file, gather_pr_statistics, _extract_prs)
 from mathlib_dashboards import Dashboard, short_description, long_description, getIdTitle
 from util import my_assert_eq, format_delta, timedelta_tryParse, relativedelta_tryParse
 
@@ -27,26 +26,14 @@ from util import my_assert_eq, format_delta, timedelta_tryParse, relativedelta_t
 class JSONInputData(NamedTuple):
     # All aggregate information stored for every open PR.
     aggregate_info: dict[int, AggregatePRInfo]
-    # Information about all open PRs
-    all_open_prs: List[BasicPRInformation]
 
 
 # Validate the command-line arguments and try to read all data passed in via JSON files.
 # Any number of JSON files passed in is fine; we interpret them all as containing open PRs.
 def read_json_files() -> JSONInputData:
-    if len(sys.argv) == 1:
-        print("error: need to pass in some JSON files with open PRs")
-        sys.exit(1)
-    all_open_prs = []
-    for i in range(1, len(sys.argv)):
-        with open(sys.argv[i]) as prfile:
-            open_prs = _extract_prs(json.load(prfile))
-            if len(open_prs) >= 900:
-                print(f"warning: file {sys.argv[i]} contains at least 900 PRs: the REST API will never return more than 1000 PRs. Please split the list into more files as necessary.", file=sys.stderr)
-            all_open_prs.extend(open_prs)
     with open(path.join("processed_data", "open_pr_data.json"), "r") as f:
         aggregate_info = parse_aggregate_file(json.load(f))
-    return JSONInputData(aggregate_info, all_open_prs)
+    return JSONInputData(aggregate_info)
 
 
 ### Helper methods: writing HTML code for various parts of the generated webpage ###
@@ -866,18 +853,11 @@ def main() -> None:
     # Populate basic information from the input data: splitting into draft and non-draft PRs
     # (mostly, we only use the latter); extract separate dictionaries for CI status and base branch.
 
-    # NB. We handle missing metadata by adding "default" values for its aggregate data
-    # (ready for review, open, against master, failing CI and just updated now).
-    aggregate_info = input_data.aggregate_info.copy()
-    for pr in input_data.all_open_prs:
-        if pr.number not in input_data.aggregate_info:
-            print(f"warning: found no aggregate information for PR {pr.number}; filling in defaults", file=sys.stderr)
-            aggregate_info[pr.number] = PLACEHOLDER_AGGREGATE_INFO
-    draft_PRs = [pr for pr in input_data.all_open_prs if aggregate_info[pr.number].is_draft]
-    nondraft_PRs = [pr for pr in input_data.all_open_prs if not aggregate_info[pr.number].is_draft]
+    aggregate_info = input_data.aggregate_info
+    all_open_prs = [AggregatePRInfo.toBasicPRInformation(data, number) for (number, data) in aggregate_info.items()]
+    draft_PRs = [pr for pr in all_open_prs if aggregate_info[pr.number].is_draft]
+    nondraft_PRs = [pr for pr in all_open_prs if not aggregate_info[pr.number].is_draft]
 
-    # The only exception is for the "on the queue" page,
-    # which points out missing information explicitly, hence is passed the non-filled in data.
     CI_status: dict[int, CIStatus] = dict()
     for pr in nondraft_PRs:
         if pr.number in input_data.aggregate_info:
@@ -888,12 +868,10 @@ def main() -> None:
     for pr in nondraft_PRs:
         base_branch[pr.number] = aggregate_info[pr.number].base_branch
     prs_from_fork = [pr for pr in nondraft_PRs if aggregate_info[pr.number].head_repo != "leanprover-community"]
-    all_pr_status = compute_pr_statusses(aggregate_info, input_data.all_open_prs)
+    all_pr_status = compute_pr_statusses(aggregate_info, all_open_prs)
     write_on_the_queue_page(all_pr_status, aggregate_info, nondraft_PRs, prs_from_fork, CI_status, base_branch)
 
-    # TODO: try to enable |use_aggregate_queue| 'queue_prs' again, once all the root causes
-    # for PRs getting 'dropped' by 'gather_stats.sh' are found and fixed.
-    prs_to_list = determine_pr_dashboards(input_data.all_open_prs, nondraft_PRs, base_branch, prs_from_fork, CI_status, aggregate_info, False)
+    prs_to_list = determine_pr_dashboards(all_open_prs, nondraft_PRs, base_branch, prs_from_fork, CI_status, aggregate_info)
 
     # FUTURE: can this time be displayed in the local time zone of the user viewing this page?
     updated = datetime.now(timezone.utc).strftime("%B %d, %Y at %H:%M UTC")

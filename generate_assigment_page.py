@@ -36,12 +36,10 @@ from dashboard import (
 
 # Assumes the aggregate data is correct: no cross-filling in of placeholder data.
 def compute_pr_list_from_aggregate_data_only(aggregate_data: dict[int, AggregatePRInfo]) -> dict[Dashboard, List[BasicPRInformation]]:
-    all_open_prs: List[BasicPRInformation] = []
     nondraft_PRs: List[BasicPRInformation] = []
     for number, data in aggregate_data.items():
         if data.state == "open":
             info = BasicPRInformation(number, data.author, data.title, infer_pr_url(number), data.labels, data.last_updated)
-            all_open_prs.append(info)
             if not data.is_draft:
                 nondraft_PRs.append(info)
     CI_status: dict[int, CIStatus] = dict()
@@ -54,7 +52,7 @@ def compute_pr_list_from_aggregate_data_only(aggregate_data: dict[int, Aggregate
     for pr in nondraft_PRs:
         base_branch[pr.number] = aggregate_data[pr.number].base_branch
     prs_from_fork = [pr for pr in nondraft_PRs if aggregate_data[pr.number].head_repo != "leanprover-community"]
-    return determine_pr_dashboards(all_open_prs, nondraft_PRs, base_branch, prs_from_fork, CI_status, aggregate_data, True)
+    return determine_pr_dashboards(all_open_prs, nondraft_PRs, base_branch, prs_from_fork, CI_status, aggregate_data)
 
 
 class ReviewerInfo(NamedTuple):

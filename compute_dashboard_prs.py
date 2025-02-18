@@ -115,11 +115,9 @@ class AggregatePRInfo(NamedTuple):
     first_on_queue: Tuple[DataStatus, datetime | None] | None
     total_queue_time: TotalQueueTime | None
 
-# Missing aggregate information will be replaced by this default item.
-PLACEHOLDER_AGGREGATE_INFO = AggregatePRInfo(
-    False, CIStatus.Missing, "master", "leanprover-community", "open", datetime.now(timezone.utc),
-    "unknown", "unknown title", [], -1, -1, -1, [], [], None, None, None, None,
-)
+    @staticmethod
+    def toBasicPRInformation(self, number: int) -> BasicPRInformation:
+        return BasicPRInformation(number, self.author, self.title, infer_pr_url(number), self.labels, self.last_updated)
 
 
 # Parse the contents |data| of an aggregate json file into a dictionary pr number -> AggregatePRInfo.
@@ -195,7 +193,6 @@ def parse_aggregate_file(data: dict) -> dict[int, AggregatePRInfo]:
 # (`BasicPRInformation` is not hashable, hence cannot be used as a dictionary key.)
 # 'aggregate_info' contains aggregate information about each PR's CI state,
 # draft status and base branch (and more, which we do not use).
-# If no detailed information was available for a given PR number, 'None' is returned.
 def compute_pr_statusses(aggregate_info: dict[int, AggregatePRInfo], prs: List[BasicPRInformation]) -> dict[int, PRStatus]:
     def determine_status(aggregate_info: AggregatePRInfo) -> PRStatus:
         # Ignore all "other" labels, which are not relevant for this anyway.
@@ -204,7 +201,7 @@ def compute_pr_statusses(aggregate_info: dict[int, AggregatePRInfo], prs: List[B
         state = PRState(labels, aggregate_info.CI_status, aggregate_info.is_draft, from_fork)
         return determine_PR_status(datetime.now(timezone.utc), state)
 
-    return {info.number: determine_status(aggregate_info[info.number] or PLACEHOLDER_AGGREGATE_INFO) for info in prs}
+    return {info.number: determine_status(aggregate_info[info.number]) for info in prs}
 
 
 # Does a PR have a given label?
@@ -391,16 +388,13 @@ def compute_dashboards_bad_labels_title(
     return (with_bad_title, prs_without_topic_label, prs_with_contradictory_labels)
 
 
-# use_aggregate_queue: if True, determine the review queue (and everything depending on it)
-# from the aggregate data and not queue.json
 def determine_pr_dashboards(
     all_open_prs: List[BasicPRInformation],
     nondraft_PRs: List[BasicPRInformation],
     base_branch: dict[int, str],
     prs_from_fork: List[BasicPRInformation],
     CI_status: dict[int, CIStatus],
-    aggregate_info: dict[int, AggregatePRInfo],
-    use_aggregate_queue: bool,
+    aggregate_info: dict[int, AggregatePRInfo]
 ) -> dict[Dashboard, List[BasicPRInformation]]:
     approved = [pr for pr in nondraft_PRs if aggregate_info[pr.number].approvals]
     prs_to_list: dict[Dashboard, List[BasicPRInformation]] = dict()
@@ -445,15 +439,7 @@ def determine_pr_dashboards(
     foo = [pr for pr in interesting_CI if base_branch[pr.number] == "master" and pr not in prs_from_fork]
     prs_to_list[Dashboard.InessentialCIFails] = prs_without_any_label(foo, other_labels + ["merge-conflict"])
 
-    queue_prs2 = None
-    with open("queue.json", "r") as queuefile:
-        queue_prs2 = _extract_prs(json.load(queuefile))
-        queue_pr_numbers2 = [pr.number for pr in queue_prs2]
-    msg = "comparing this page's review dashboard (left) with the Github #queue (right)"
-    if my_assert_eq(msg, [pr.number for pr in queue_prs], queue_pr_numbers2):
-        print("Review dashboard and #queue match, hooray!", file=sys.stderr)
-
-    prs_to_list[Dashboard.Queue] = queue_prs if use_aggregate_queue else queue_prs2
+    prs_to_list[Dashboard.Queue] = queue_prs
     queue = prs_to_list[Dashboard.Queue]
     prs_to_list[Dashboard.QueueNewContributor] = prs_with_label(queue, "new-contributor")
     prs_to_list[Dashboard.QueueEasy] = prs_with_label(queue, "easy")
