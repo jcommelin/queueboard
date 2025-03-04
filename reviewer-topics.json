@@ -238,5 +238,11 @@
     "zulip_handle": "@**Etienne Marion**",
     "top_level": ["t-measure-probability"],
     "free_form": "mostly interested in probability theory and statistics"
+  },
+  {
+    "github_handle": "kmill",
+    "zulip_handle": "@**Kyle Miller**",
+    "top_level": ["t-meta", "t-combinatorics"],
+    "free_form": ""
   }
 ]
